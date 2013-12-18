@@ -1,0 +1,314 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>ajax upload php</title>
+	<style type="text/css">
+	body {
+	    line-height: 1.6;
+	    font-family: "Microsoft YaHei","微软雅黑",Helvetica,"黑体",Arial,Tahoma;
+	    color: #222;
+	    font-size: 14px;
+    }
+    .btn {
+      display: inline-block;
+      height: 30px;
+      line-height: 30px;
+      vertical-align: middle;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 3px;
+      font-size: 14px;
+      border-width: 1px;
+      border-style: solid;
+      cursor: pointer;
+      position: relative;
+    }
+    .btn-primary {
+    	background-color: #428bca;
+		border-color: #357ebd;
+    	
+     /* background-color: #56a447;
+      background-image: linear-gradient(to bottom,#60b452 0,#56a447 100%);
+      border-color: #3d810c;*/
+      color: #fff;
+    }
+    .btn-primary:hover {
+    	background-color: #3276b1;
+		border-color: #285e8e;
+     	 /*background-image: linear-gradient(to bottom,#56a447 100%,#60b452 0);*/
+    }
+    .btn-primary input[type="submit"] {
+		color: #fff;
+		cursor: pointer;
+		display: block;
+		height: 100%;
+		background-color: transparent;
+		border: 0;
+		outline: 0;
+		overflow: visible;
+		padding: 0 36px;
+	}
+	.btn-primary-submit{
+		margin-left: 100px;
+	}
+	.btn-info {
+		color: #ffffff;
+		background-color: #5bc0de;
+		border-color: #46b8da;
+		padding: 0 10px;
+	}
+	.btn-info:hover{
+		background-color: #39b3d7;
+		border-color: #269abc;
+	}
+    .file{
+      top: 0;
+      position: absolute;
+      right: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      opacity: 0;
+    }
+	.progress {
+		overflow: hidden;
+		height: 20px;
+		margin-bottom: 20px;
+		background-color: #f5f5f5;
+		border-radius: 4px;
+		-webkit-box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
+		box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
+	}
+	.progress-bar {
+		float: left;
+		width: 0;
+		height: 100%;
+		font-size: 12px;
+		line-height: 20px;
+		color: #fff;
+		text-align: center;
+		background-color: #428bca;
+		-webkit-box-shadow: inset 0 -1px 0 rgba(0,0,0,.15);
+		box-shadow: inset 0 -1px 0 rgba(0,0,0,.15);
+		-webkit-transition: width .6s ease;
+		transition: width .6s ease;
+		background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+		background-size: 40px 40px;
+	}
+	.progress.active .progress-bar {
+		-webkit-animation: progress-bar-stripes 2s linear infinite;
+		animation: progress-bar-stripes 2s linear infinite;
+	}
+
+	</style>
+</head>
+<body>
+	<h3>Ajax断点续传展示</h3>
+	<form action="upload.php" name="form1" id="form1" >
+		<p>
+			
+			<span class="btn  btn-info">
+				请选择要上传的文件
+				<input type="file" name="file" id="file" class="file">
+			</span>
+			<!-- <input type="button" name="ajax" id="ajaxbtn" value="ajaxbtn"> -->
+			<span class="btn  btn-primary btn-primary-submit">
+				<input type="submit" name="submit" value="开始上传">
+			</span>
+		</p>	
+		<p>
+		    文件名：
+		    <span id="filename"></span>	
+		</p>
+		<p>
+		    大小：
+		    <span id="filesize"></span>	
+		</p>
+		<p>
+		    类型：
+		    <span id="filetype"></span>	
+		</p>
+		<p>
+			上传进度:<b id="result1">0</b>%
+
+		</p>
+		<p id="download">
+
+		</p>
+		<div class="progress progress-striped active" >
+	        <div class="progress-bar progress-bar-success" style="width: 0%" id="loading1">
+	          
+	        </div>
+      	</div>
+
+	</form>
+
+	<script type="text/javascript">
+		function S4() {
+		   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+		};
+
+		function guid() {
+		   return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+		};
+		var $ = function(id){
+			return document.getElementById(id);
+		};
+
+		//var fileSliceSize = 1024*100; //100K
+		var localStorageStatus = false;
+		var fileSliceSize = 1024*1024*5; //5M
+		function loading(percent){
+			$('result1').innerHTML = percent;
+			$('loading1').style.width = percent+'%';
+		}
+		function fileUpload(file,successCallBack){
+			var name = file.name;
+			var size = file.size;
+			var start = 0;
+			var count = 0;
+
+			//判断本地存储 
+			if( localStorageStatus && localStorage.getItem(name) ){
+				//注：本地存储的数据都是字符串 
+				start = parseInt( localStorage.getItem(name) );
+				if(start >= size){
+					alert('已经上传完毕');
+					return;
+				}
+			}
+
+			var upload = function(){
+				var data = new FormData();
+				console.log('------------------------------',count);
+				console.log('start:',start,' end:',start+fileSliceSize);
+
+				data.append("start", start );
+				data.append("fileSliceSize", fileSliceSize );
+				data.append("size", size );
+				data.append("fileid", guid() );
+				data.append("name", name);
+				//data.append("name", encodeURIComponent(name));//中文转码
+				data.append("file", file.slice(start, start+fileSliceSize) );
+
+				var xhr = new XMLHttpRequest();
+				// 上传进度中
+				xhr.upload.addEventListener("progress", function(e) {
+					//console.log(e)
+					//objStateElement.backgroundSize(fileid, (e.loaded + start) / size * 100);
+				}, false);
+				xhr.onreadystatechange = function(){
+					if(xhr.readyState == 4){
+						if(xhr.status == 200 && xhr.responseText){
+							var result = xhr.responseText;
+							console.log(result)
+							try{
+								var json = JSON.parse(xhr.responseText);
+								var next = parseInt(json.start);
+								console.log('json ',json);
+								//console.log('next ',next,size,next/size,parseInt(next/size));
+
+								start = start+fileSliceSize;
+								//本地存储
+								localStorage.setItem(name,start);
+
+								var percent = parseInt(start/size*100);
+								percent = percent>100?100:percent;
+								//显示进度
+								loading(percent);
+								
+								count ++;
+								//若开始处大于文件大小 说明文件已传完
+								if( (start)>=size ){
+									
+									console.log('complete');
+									$('form1').reset();
+									var $a = document.createElement('a');
+									$a.target = '_blank';
+									$a.href = 'upload/'+encodeURIComponent(name);
+									$a.innerHTML = name;
+									$('download').appendChild($a);
+									successCallBack && successCallBack();
+								}
+								//继续上传
+								else{
+									//延时一下 不然会内存溢出
+									setTimeout(function(){
+										upload();
+									}, 50);
+								}
+								console.log('percent ',percent,'%');
+								
+									
+								
+								
+								
+							}catch(error){
+								console.warn(error)
+							}
+						}
+
+					}
+
+				};
+				xhr.open("post", 'upload.php', false);//false 表示同步上传 默认true
+				xhr.send(data);
+
+
+			};
+
+			upload();
+
+
+		}
+		$('file').addEventListener('change', function(){
+			var files = this.files,file = files[0];
+			if(!file){
+				return;
+			}
+			var size = file.size,name = file.name,strSize;
+			loading(0);
+			console.log(file.name+'  localStorage start ',localStorage.getItem(file.name) )
+			// 如果大小大于1M使用'M'为单位表示, 1位小数点
+			if (size > 1024 * 1024) {
+				strSize = Math.ceil(size / (1024 * 1024) * 10) / 10 + "M";
+			} else if (size > 1024) {
+				// 如果大小大于1KB使用'KB'为单位表示, 1位小数点
+				strSize = Math.ceil(size / 1024 * 10) / 10 + "KB";
+			}
+
+			$('filesize').innerHTML = strSize;
+			$('filename').innerHTML = name;
+			$('filetype').innerHTML = file.type;
+			$('download').innerHTML = '';
+				
+
+		}, false);
+
+		
+
+		$('form1').addEventListener('submit', function(event){
+			var $file = $('file'),files = $file.files,file = files[0];
+			//阻止提交表单
+			event.preventDefault();
+
+			if(!file){
+				alert('请选择文件');
+				return;
+			}
+			
+			console.log('start upload');
+			console.log('name ',file.name,' size ',file.size);
+			fileUpload(file);
+			
+			
+			
+
+		});
+
+
+
+	</script>
+</body>
+</html>
