@@ -157,8 +157,9 @@
 		};
 
 		//var fileSliceSize = 1024*100; //100K
-		var localStorageStatus = false;
+		var localStorageStatus = true;//开启断点续传
 		var fileSliceSize = 1024*1024*5; //5M
+		//localStorage.clear()
 		function loading(percent){
 			$('result1').innerHTML = percent;
 			$('loading1').style.width = percent+'%';
@@ -267,9 +268,18 @@
 			if(!file){
 				return;
 			}
-			var size = file.size,name = file.name,strSize;
-			loading(0);
-			console.log(file.name+'  localStorage start ',localStorage.getItem(file.name) )
+			var size = file.size,name = file.name,strSize,start = localStorage.getItem(file.name),percent;
+
+			if(start){
+				start = parseInt(start);
+				percent = parseInt(start/size*100);
+				percent = percent>100?100:percent;
+				loading(percent);
+			}else{
+				loading(0);
+			}
+			
+			console.log(file.name+'  localStorage start ', start);
 			// 如果大小大于1M使用'M'为单位表示, 1位小数点
 			if (size > 1024 * 1024) {
 				strSize = Math.ceil(size / (1024 * 1024) * 10) / 10 + "M";
