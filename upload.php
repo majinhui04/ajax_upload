@@ -8,6 +8,7 @@
 	$start = $_POST['start'];
 	$fileSliceSize = $_POST['fileSliceSize'];
 	$fileid = $_POST['fileid'];
+	$filetype = $_POST['filetype'];
 	$tempFile = $_FILES['file']['tmp_name'];//临时路径
 
 
@@ -33,14 +34,14 @@
 
 
 	$result = json_decode('{}');
-	$result->name = $name;
+	$result->name = $fileid.$filetype;
 	$result->size = $size;
 	$result->start = $start+$fileSliceSize;
 	$fileStream = file_get_contents($tempFile);
 	
 
 	//防止中文乱码
-	$name = iconv( 'utf-8', 'gb2312', urldecode($name) );
+	$name = iconv( 'utf-8', 'gb2312', urldecode($result->name) );
 	file_put_contents('./upload/'.$name,$fileStream,FILE_APPEND);
 	echo json_encode($result);
 	

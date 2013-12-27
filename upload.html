@@ -2,6 +2,7 @@
 <html>
 <head>
 	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
 	<title>ajax upload php</title>
 	<style type="text/css">
 	body {
@@ -57,6 +58,7 @@
 		background-color: #5bc0de;
 		border-color: #46b8da;
 		padding: 0 10px;
+		margin:5px;
 	}
 	.btn-info:hover{
 		background-color: #39b3d7;
@@ -114,7 +116,7 @@
 			</span>
 			<!-- <input type="button" name="ajax" id="ajaxbtn" value="ajaxbtn"> -->
 			<span class="btn  btn-primary btn-primary-submit">
-				<input type="submit" name="submit" value="开始上传">
+				<input type="submit" name="submit" value="开始上传" id="upload_start">
 			</span>
 		</p>	
 		<p>
@@ -156,22 +158,32 @@
 			return document.getElementById(id);
 		};
 
-		//var fileSliceSize = 1024*100; //100K
+		var fileSliceSize = 1024*100; //100K
 		var localStorageStatus = true;//开启断点续传
-		var fileSliceSize = 1024*1024*5; //5M
+		//var fileSliceSize = 1024*1024*5; //5M
+		localStorage.clear();
 		//localStorage.clear()
 		function loading(percent){
 			$('result1').innerHTML = percent;
 			$('loading1').style.width = percent+'%';
 		}
+		
 		function fileUpload(file,successCallBack){
 			var name = file.name;
 			var size = file.size;
 			var start = 0;
 			var count = 0;
-
+			var filetype = name.substring(name.lastIndexOf('.'));
+			var filename = name.substring(0,name.lastIndexOf('.'));
+			var $upload_start = document.getElementById('upload_start');
+			console.log($upload_start)
+			$upload_start.value = '上传中...';
+			$upload_start.setAttribute('disabled','上传中');
+			$upload_start.setAttribute('disabled','disabled');
+			
 			//判断本地存储 
-			if( localStorageStatus && localStorage.getItem(name) ){
+			if( localStorageStatus && localStorage.getItem(name) && (localStorage.getItem(name+'_size') == (size+'')) ) {
+				alert(11)
 				//注：本地存储的数据都是字符串 
 				start = parseInt( localStorage.getItem(name) );
 				if(start >= size){
@@ -182,14 +194,17 @@
 
 			var upload = function(){
 				var data = new FormData();
+				var timeStamp = new Date().valueOf();
+				var fileid = filename+timeStamp;
 				console.log('------------------------------',count);
 				console.log('start:',start,' end:',start+fileSliceSize);
 
 				data.append("start", start );
 				data.append("fileSliceSize", fileSliceSize );
 				data.append("size", size );
-				data.append("fileid", guid() );
+				data.append("fileid", fileid );
 				data.append("name", name);
+				data.append('filetype',filetype);
 				//data.append("name", encodeURIComponent(name));//中文转码
 				data.append("file", file.slice(start, start+fileSliceSize) );
 
@@ -213,6 +228,7 @@
 								start = start+fileSliceSize;
 								//本地存储
 								localStorage.setItem(name,start);
+								localStorage.setItem(name+'_size',size);
 
 								var percent = parseInt(start/size*100);
 								percent = percent>100?100:percent;
@@ -227,10 +243,13 @@
 									$('form1').reset();
 									var $a = document.createElement('a');
 									$a.target = '_blank';
-									$a.href = 'upload/'+encodeURIComponent(name);
+									$a.href = 'upload/'+fileid+filetype;
 									$a.innerHTML = name;
 									$('download').appendChild($a);
 									successCallBack && successCallBack();
+									$upload_start.value = '开始上传';
+									$upload_start.removeAttribute('disabled');
+									localStorage.clear();
 								}
 								//继续上传
 								else{
